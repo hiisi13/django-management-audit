@@ -11,20 +11,25 @@ from management_audit.models import Audit
 __version__ = '0.1.0'
 
 
-def install(apps_to_audit):
-    importer = CommandImporter(apps_to_audit)
+def install(apps_to_audit, exclude=None):
+    importer = CommandImporter(apps_to_audit, exclude)
     sys.meta_path.insert(0, importer)
 
 
 class CommandImporter(object):
 
-    def __init__(self, apps_to_audit):
+    def __init__(self, apps_to_audit, exclude):
         self.paths = dict()
         self.commands_to_audit = dict()
         for app_name in apps_to_audit:
-            path = os.path.join(app_name, 'management')
-            commands = {self.to_module_name(app_name, c): c for c in find_commands(path)}
+            commands = self.get_commands(app_name, exclude)
             self.commands_to_audit.update(commands)
+
+    def get_commands(self, app_name, exclude):
+        path = os.path.join(app_name, 'management')
+        commands = find_commands(path)
+        return {self.to_module_name(app_name, c): c for c in commands
+            if not exclude or c not in exclude}
 
     def to_module_name(self, app_name, command):
         return '%s.management.commands.%s' % (app_name, command)
